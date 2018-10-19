@@ -1,5 +1,12 @@
+/**
+ * Copyright (c) 2017-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
 #include "unity.h"
-
 #include "drivers/GpioSX1509.h"
 
 #include "drivers/OcGpio.h"
@@ -140,15 +147,6 @@ static const OcGpio_Port s_sx1509_ioexp = {
     .object_data = &(SX1509_Obj){},
 };
 
-static const OcGpio_Port s_invalid_ioexp = {
-    .fn_table = &GpioSX1509_fnTable,
-    .cfg = &(SX1509_Cfg) {
-        .i2c_dev = { I2C_BUS, 0x01 },
-    },
-    .object_data = &(SX1509_Obj){},
-};
-
-static const OcGpio_Pin s_invalid_pin = { &s_invalid_ioexp, 0 };
 static OcGpio_Pin s_test_pins[16];
 
 /* ============================= Boilerplate ================================ */
