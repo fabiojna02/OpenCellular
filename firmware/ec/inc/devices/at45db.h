@@ -29,6 +29,8 @@ typedef void (*AT45DB_CallbackFn)(AT45DB_Event evt, uint16_t value,
 typedef struct AT45DB_Cfg {
     SPI_Dev dev;
     OcGpio_Pin *pin_alert;
+    const char *fileName[5];
+    uint8_t noOfFiles;
 } AT45DB_Cfg;
 
 typedef struct AT45DB_Obj {
@@ -45,7 +47,7 @@ typedef struct AT45DB_Dev {
 ePostCode at45db_probe(AT45DB_Dev *dev, POSTData *postData);
 ReturnStatus at45db_data_read(AT45DB_Dev *dev, uint8_t *data,
                               uint32_t data_size, uint32_t byte, uint32_t page);
-ReturnStatus at45db_data_write(AT45DB_Dev *dev, uint8_t *data,
+ReturnStatus at45db_data_write(AT45DB_Dev *dev, const uint8_t *data,
                                uint32_t data_size, uint32_t byte,
                                uint32_t page);
 ReturnStatus at45db_erasePage(AT45DB_Dev *dev, uint32_t page);

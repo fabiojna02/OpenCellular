@@ -39,6 +39,9 @@
 #define PARAM_STR_BUFF_SIZE         100
 #define PARAM_TYPE_BUFF_SIZE        32
 
+#define OCMW_ALERT_ACTION_SIZE 12
+#define OCMW_ALERT_DATE_SIZE 24
+#define OCMW_ALERT_STRING_SIZE 64
 #define OCMW_MAX_SUBSYSTEM_SIZE     16
 #define OCMW_MAX_ACTION_SIZE        16
 #define OCMW_MAX_MSGTYPE_SIZE       16
@@ -104,7 +107,7 @@ typedef struct __attribute__((packed, aligned(1))){
     char subsysName[OCMW_MAX_SUBSYSTEM_SIZE];   /* Subsystem Name */
     char deviceName[OCMW_POST_DEVICE_SIZE];     /* Device Name */
     uint8_t status;                         /* device status */
-}ocwarePostResultData;
+} ocwarePostResultData;
 
 typedef struct {
     unsigned int count;                                         /* Device Status count */
@@ -117,19 +120,37 @@ typedef struct {
     char desc[OCMW_POST_DESC_SIZE];     /* Device description */
 } ocwarePostReplyCode;
 
+typedef struct alertevent {
+    char string[OCMW_ALERT_STRING_SIZE]; /* alert string */
+    char action[OCMW_ALERT_ACTION_SIZE]; /* ACTIVE / CLEAR */
+    char value[OCMW_ALERT_STRING_SIZE];
+} alertevent;
+
+typedef struct allAlertEvent {
+    char string[OCMW_ALERT_STRING_SIZE]; /* alert string */
+    char action[OCMW_ALERT_ACTION_SIZE]; /* ACTIVE / CLEAR */
+    char datetime[OCMW_ALERT_DATE_SIZE]; /* YYYY-MM-DD hh:mm:ss */
+    char value[OCMW_ALERT_STRING_SIZE];
+    char actualValue[OCMW_ALERT_STRING_SIZE];
+} allAlertEvent;
+
+typedef struct alertlist {
+    uint16_t nalerts;           /* Number of alerts */
+    struct allAlertEvent *list; /* Alert list */
+} alertlist;
 /*
  * @param sem an input value (by pointer)
  *
  * @return true if function succeeds, false otherwise
  */
-int32_t ocmw_sem_wait_nointr(sem_t *sem);
+extern int32_t ocmw_sem_wait_nointr(sem_t *sem);
 /*
  * @param sem an input value (by pointer)
  * @param timeout an input value (by pointer)
  *
  * @return true if function succeeds, false otherwise
  */
-int32_t ocmw_sem_timedwait_nointr(sem_t *sem, const struct timespec *timeout);
+extern int32_t ocmw_sem_timedwait_nointr(sem_t *sem, const struct timespec *timeout);
 /*
  * @param paramindex an input value (by value)
  * @param paramSizebuf an input value (by pointer)
@@ -137,39 +158,39 @@ int32_t ocmw_sem_timedwait_nointr(sem_t *sem, const struct timespec *timeout);
  * @param pos an output value (by pointer)
  *
  */
-void ocmw_dataparsing_from_db(int32_t paramIndex, int32_t *paramSizebuf,
+extern void ocmw_dataparsing_from_db(int32_t paramIndex, int32_t *paramSizebuf,
         int32_t *dataSize, int32_t *pos);
 /*
  * @param input an input buffer (by pointer)
  * @param bufParamStruct an output buffer (by pointer)
  *
  */
-void ocmw_dataparsing_from_ec(ocmwSendRecvBuf *input,
+extern void ocmw_dataparsing_from_ec(ocmwSendRecvBuf *input,
         bufParam * bufParamStruct);
 /*
  * @param uartInputBuf an input buffer (by pointer)
  *
  * @return true if function succeeds, false otherwise
  */
-int32_t ocmw_fill_inputstruct(ocmwSendRecvBuf *uartInputBuf);
+extern int32_t ocmw_fill_inputstruct(ocmwSendRecvBuf *uartInputBuf);
 /*
  * @param ecInputData an input data (by value)
  *
  * @return true if function succeeds, false otherwise
  */
-int8_t ocmw_parse_eepromdata_from_ec (ocmwSendRecvBuf ecInputData);
+extern int8_t ocmw_parse_eepromdata_from_ec (ocmwSendRecvBuf ecInputData);
 /*
  * @param ecInputData an input data (by value)
  *
  * @return true if function succeeds, false otherwise
  */
-int32_t ocmw_parse_obc_from_ec(ocmwSendRecvBuf ecInputData);
+extern int32_t ocmw_parse_obc_from_ec(ocmwSendRecvBuf ecInputData);
 /*
  * @param ecInputData an input data (by value)
  *
  * @return true if function succeeds, false otherwise
  */
-int32_t ocmw_parse_testingmodule_from_ec(ocmwSendRecvBuf ecInputData);
+extern int32_t ocmw_parse_testingmodule_from_ec(ocmwSendRecvBuf ecInputData);
 /*
  * @param msgaction an input value (by value)
  * @param msgtype an input value (by value)
@@ -177,7 +198,5 @@ int32_t ocmw_parse_testingmodule_from_ec(ocmwSendRecvBuf ecInputData);
  * @param paramvalue an input value (by pointer)
  *
  */
-//int ocmw_msgproc_send_msg(int8_t msgaction, int8_t msgtype,
-    //                    const int8_t* paramstr, void* paramvalue);
-
+extern int32_t ocmw_handle_show_alerts(char *response);
 #endif /* _OCMW_HELPER_H_ */

@@ -399,7 +399,7 @@ static void _ina226_isr(void *context)
         uint16_t value;
         uint16_t new_mask = alert_mask & (~INA_ALERT_EN_MASK);
         INA226_Event evt;
-        uint16_t alert_lim;
+        uint16_t alert_lim = 0x0000;
         ina226_readCurrentLim(dev, &alert_lim);
 
         if (alert_mask & INA_MSK_SOL) {
@@ -469,7 +469,17 @@ static void _ina226_isr(void *context)
             _enable_alert(dev, new_mask);
         }
 
-        dev->obj.alert_cb(evt, value, dev->obj.cb_context);
+        OCMPActionType alertAction = OCMP_AXN_TYPE_ACTIVE;
+        if (evt != INA226_EVT_COL) {
+            if ((alert_mask & INA_MSK_AFF)) {
+                alertAction = OCMP_AXN_TYPE_CLEAR;
+            } else {
+                LOGGER_WARNING("IN226::Unsupported INA event 0x%x\n", evt);
+                return;
+            }
+        }
+        dev->obj.alert_cb(evt, alertAction, value, alert_lim,
+                          dev->obj.cb_context);
     }
     /* TODO: Conversion ready not handled */
 }
@@ -563,7 +573,7 @@ ReturnStatus ina226_enableAlert(INA226_Dev *dev, INA226_Event evt)
  *****************************************************************************/
 ePostCode ina226_probe(INA226_Dev *dev, POSTData *postData)
 {
-    uint16_t devId = 0x00;
+    uint16_t devId = 0x0000;
     uint16_t manfId = 0x0000;
     if (ina226_getDevId(dev, &devId) != RETURN_OK) {
         return POST_DEV_MISSING;

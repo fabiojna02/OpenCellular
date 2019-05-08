@@ -41,7 +41,7 @@ CFLAGS += -Dxdc_target_types__="xdc_target_posix.h"
 # Short enums are assumed throughout the code, need the -fshort-enums flag
 CFLAGS += -fshort-enums
 
-INC_DIRS=-I. -Isrc -I$(UNITY_ROOT)/src -I$(OCWARE_ROOT) -I$(OCWARE_ROOT)/src -Ixdc_stubs -I$(DIR_SYSBIOS) -I$(DIR_TIDRIVERS) -I$(DIR_XDC)
+INC_DIRS=-I. -Isrc -isystem$(UNITY_ROOT)/src -I$(OCWARE_ROOT) -I$(OCWARE_ROOT)/src -Ixdc_stubs -isystem$(DIR_SYSBIOS) -isystem$(DIR_TIDRIVERS) -isystem$(DIR_XDC)
 
 BUILD_PATHS = $(RUNNER_PATH) $(PATHB) $(PATHR)
 
@@ -87,8 +87,12 @@ endif
 
 # Make Targets
 # =============================================================================
-test: $(BUILD_PATHS) $(RESULTS)
+
+test: get_cfg $(BUILD_PATHS) $(RESULTS)
 	ruby $(UNITY_ROOT)/auto/unity_test_summary.rb $(PATHR)
+
+get_cfg:
+	cd ../../utilities/build; ./envDetect.sh $(shell cat $(UNITY_ROOT)/release/version.info)
 
 junit: test
 	@ruby $(UNITY_ROOT)/auto/stylize_as_junit.rb -r $(PATHR) -o $(PATHR)/unit-test-results.xml
@@ -138,7 +142,7 @@ $(PATHB)Test_ltc4015$(TARGET_EXTENSION): $(STD_FILES) $(TEST_LTC4015_SRC) $(INC_
 TEST_powerSource_SRC=$(OCWARE_ROOT)/src/devices/powerSource.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c
 $(PATHB)Test_powerSource$(TARGET_EXTENSION): $(STD_FILES) $(TEST_powerSource_SRC) $(INC_M)
 
-TEST_EEPROM_SRC=$(OCWARE_ROOT)/src/devices/eeprom.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c
+TEST_EEPROM_SRC=$(OCWARE_ROOT)/src/devices/eeprom.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/drivers/GpioPCA9557.c $(OCWARE_ROOT)/src/devices/pca9557.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c fake/fake_SX1509_register.c fake/fake_eeprom.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_SDR.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_FE.c
 $(PATHB)Test_eeprom$(TARGET_EXTENSION): $(STD_FILES) $(TEST_EEPROM_SRC) $(INC_M)
 
 TEST_LTC4275_SRC=$(OCWARE_ROOT)/src/devices/ltc4275.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c
@@ -155,6 +159,52 @@ $(PATHB)Test_PinGroup_driver$(TARGET_EXTENSION): $(STD_FILES) $(TEST_PINGROUP_SR
 
 TEST_OCGPIO_SRC=$(OCWARE_ROOT)/src/drivers/OcGpio.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_I2C.c fake/fake_GPIO.c fake/fake_ThreadedISR.c $(OCWARE_ROOT)/src/helpers/memory.c stub/stub_GateMutex.c
 $(PATHB)Test_OcGpio$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCGPIO_SRC)
+
+TEST_OCMP_LTC4015_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_ltc4015.c $(OCWARE_ROOT)/src/devices/ltc4015.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c stub/stub_GateMutex.c stub/stub_ltc4015.c $(OCWARE_ROOT)/src/post/post_util.c fake/fake_SX1509_register.c fake/fake_ltc4015_register.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c
+$(PATHB)Test_ocmp_ltc4015$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_LTC4015_SRC) $(INC_M)
+
+TEST_OCMP_powerSource_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_powerSource.c $(OCWARE_ROOT)/src/devices/powerSource.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c stub/stub_GateMutex.c $(OCWARE_ROOT)/src/post/post_util.c fake/fake_SX1509_register.c fake/fake_powerSource.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c
+$(PATHB)Test_ocmp_powerSource$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_powerSource_SRC) $(INC_M)
+
+TEST_OCMP_SE98A_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_se98a.c $(OCWARE_ROOT)/src/devices/se98a.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c stub/stub_se98a.c $(OCWARE_ROOT)/src/post/post_util.c fake/fake_se98a.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c
+$(PATHB)Test_ocmp_se98a$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_SE98A_SRC) $(INC_M)
+
+TEST_OCMP_INA226_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_ina226.c $(OCWARE_ROOT)/src/devices/ina226.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c stub/stub_GateMutex.c stub/stub_ina226.c $(OCWARE_ROOT)/src/post/post_util.c fake/fake_SX1509_register.c fake/fake_ina226.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_SDR.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_FE.c
+$(PATHB)Test_ocmp_ina226$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_INA226_SRC) $(INC_M)
+
+TEST_OCMP_CAT24C04_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_cat24c04.c $(OCWARE_ROOT)/src/devices/eeprom.c $(OCWARE_ROOT)/src/drivers/GpioPCA9557.c $(OCWARE_ROOT)/src/devices/pca9557.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c stub/stub_GateMutex.c fake/fake_SX1509_register.c fake/fake_PCA9557.c fake/fake_eeprom.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_SDR.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_FE.c
+$(PATHB)Test_ocmp_cat24c04$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_CAT24C04_SRC) $(INC_M)
+
+TEST_OCMP_LTC4275_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_ltc4275.c $(OCWARE_ROOT)/src/devices/ltc4275.c $(OCWARE_ROOT)/src/devices/i2cbus.c $(OCWARE_ROOT)/src/post/post_util.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_ltc4275.c stub/stub_GateMutex.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c
+$(PATHB)Test_ocmp_ltc4275$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_LTC4275_SRC) $(INC_M)
+
+TEST_LTC4274_SRC=$(OCWARE_ROOT)/src/devices/ltc4274.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_ltc4274.c stub/stub_GateMutex.c $(OCWARE_ROOT)/src/post/post_util.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c
+$(PATHB)Test_ltc4274$(TARGET_EXTENSION): $(STD_FILES) $(TEST_LTC4274_SRC) $(INC_M)
+
+TEST_OCMP_DEBUGI2C_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_debugi2c.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_debugI2C.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c
+$(PATHB)Test_ocmp_debugi2c$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_DEBUGI2C_SRC)
+
+TEST_OCMP_RFWATCHDOG_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_rfwatchdog.c $(OCWARE_ROOT)/src/devices/i2cbus.c $(OCWARE_ROOT)/src/helpers/memory.c  fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_PCA9557.c fake/fake_rfwatchdog.c stub/stub_GateMutex.c $(OCWARE_ROOT)/src/drivers/GpioPCA9557.c $(OCWARE_ROOT)/src/devices/pca9557.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_FE.c
+$(PATHB)Test_ocmp_rfwatchdog$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_RFWATCHDOG_SRC)
+
+TEST_OCMP_FE_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_fe.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_FE.c
+$(PATHB)Test_ocmp_fe$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_FE_SRC)
+
+TEST_OCMP_DEBUGOCGPIO_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_debugocgpio.c $(OCWARE_ROOT)/src/drivers/OcGpio.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_debugocgpio.c fake/fake_SX1509_register.c fake/fake_PCA9557.c stub/stub_GateMutex.c $(OCWARE_ROOT)/src/drivers/GpioPCA9557.c $(OCWARE_ROOT)/src/devices/pca9557.c $(OCWARE_ROOT)/src/drivers/GpioSX1509.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/devices/i2cbus.c $(OCWARE_ROOT)/src/helpers/memory.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_GBC.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_SDR.c
+$(PATHB)Test_ocmp_debugocgpio$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_DEBUGOCGPIO_SRC)
+
+TEST_OCMP_DATXXR5A_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_dat-xxr5a-pp.c $(OCWARE_ROOT)/src/drivers/PinGroup.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_dat.c fake/fake_PCA9557.c $(OCWARE_ROOT)/src/helpers/memory.c stub/stub_GateMutex.c $(OCWARE_ROOT)/src/drivers/GpioPCA9557.c $(OCWARE_ROOT)/src/devices/pca9557.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_FE.c
+$(PATHB)Test_ocmp_dat-xxr5a$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_DATXXR5A_SRC)
+
+
+TEST_LED_SRC=$(OCWARE_ROOT)/src/devices/led.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_SX1509_register.c fake/fake_led.c stub/stub_GateMutex.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_LED.c
+$(PATHB)Test_led$(TARGET_EXTENSION): $(STD_FILES) $(TEST_LED_SRC)
+
+TEST_OCMP_LED_SRC=$(OCWARE_ROOT)/src/devices/ocmp_wrappers/ocmp_led.c $(OCWARE_ROOT)/src/devices/led.c $(OCWARE_ROOT)/src/devices/sx1509.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_SX1509_register.c fake/fake_led.c stub/stub_GateMutex.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_LED.c
+$(PATHB)Test_ocmp_led$(TARGET_EXTENSION): $(STD_FILES) $(TEST_OCMP_LED_SRC)
+
+TEST_ADT7481_SRC=$(OCWARE_ROOT)/src/devices/adt7481.c $(OCWARE_ROOT)/src/devices/i2cbus.c fake/fake_GPIO.c fake/fake_I2C.c fake/fake_ThreadedISR.c fake/fake_adt7481.c stub/stub_GateMutex.c $(OCWARE_ROOT)/src/post/post_util.c $(OCWARE_ROOT)/platform/oc-sdr/cfg/OC_CONNECT_SDR.c
+$(PATHB)Test_adt7481$(TARGET_EXTENSION): $(STD_FILES) $(TEST_ADT7481_SRC)
 
 $(PATHB)%$(TARGET_EXTENSION):
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $^ -o $@    

@@ -7,7 +7,7 @@
 # Set proper path.
 ######################
 
-OCWARE_DIR ?= $(HOME)/OpenCellular/firmware/ec
+OCWARE_DIR ?= $(shell pwd)
 TIRTOS_DIR ?= $(HOME)/ti/tirtos_tivac_2_16_01_14
 XDCTOOLS_DIR ?= $(HOME)/ti/xdctools_3_32_00_06_core
 TOOLCHAIN ?= /usr
@@ -64,7 +64,7 @@ CFLAGS += -isystem$(XDC_PATH) -isystem$(BIOS_PATH) -isystem$(TIDRIVER_PATH) -isy
 
 LD = $(TOOLCHAIN)/bin/arm-none-eabi-gcc
 LFLAGS = -nostartfiles -static -Wl,--gc-sections -march=armv7e-m -Wl,-T,OC_CONNECT1.lds
-LFLAGS += --specs=nosys.specs -mfloat-abi=hard -mfpu=fpv4-sp-d16
+LFLAGS += --specs=nosys.specs --specs=nano.specs -mfloat-abi=hard -mfpu=fpv4-sp-d16
 LFLAGS += -Wl,--print-memory-usage #Optional
 LFLAGS += -Xlinker -Map=$(OUT)/main.map #Optional
 LLIBS = -L$(TIVAWARE_DIR)/driverlib/gcc/
@@ -84,11 +84,23 @@ LINT_FLAGS = -i -style=file -fallback-style=none
 
 .PRECIOUS: %/compiler.opt %/linker.cmd
 
-all: oc_connect1
-oc_connect1: $(OUT)/OpenCellular.bin
+default: get_cfg all
+
+all: oc_connect1 hash
+
+get_cfg:
+	cd ../utilities/build; ./envDetect.sh $(CC) $(TIRTOS_DIR)
+
+hash:
+	cd ../utilities/checksums; ./hashes.sh $(shell pwd)/$(OUT) -ec
+
+gen_schema:
+	cd ../utilities/schema; ./mk_schema.sh
+
+oc_connect1: gen_schema $(OUT)/OpenCellular.bin
 
 $(OUT)/%/compiler.opt $(OUT)/%/linker.cmd : %.cfg
-	$(CONFIGURO) -c $(TOOLCHAIN) -t $(TARGET) -p $(PLATFORM) -r release $<
+	$(CONFIGURO) -c $(TOOLCHAIN) -t $(TARGET) -p $(PLATFORM) -r debug $<
 	cp $(OUT)/$(CONFIG)/package/cfg/$*_$(ROV_XS_SUFFIX).rov.xs .
 
 $(MAIN_OBJS): %.o: %.c $(OUT)/$(CONFIG)/compiler.opt
@@ -110,6 +122,7 @@ test:
 	cd test && $(MAKE) $(TESTFLAGS)
 
 ci: TESTFLAGS = ci
+ci: CFLAGS += -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wswitch-default -Wunreachable-code -Winit-self -Wno-missing-field-initializers -Wno-unknown-pragmas -Wstrict-prototypes -Wundef
 ci: CFLAGS += -ftest-coverage
 ci: all test
 
