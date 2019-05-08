@@ -20,6 +20,7 @@
 static int32_t loopCountPost = 0;
 extern debugI2CData I2CInfo;
 extern debugMDIOData MDIOInfo;
+extern ethTivaClient clientInfo;
 extern uint8_t mcuMsgBuf[OCMP_MSG_SIZE];
 extern ocmwSchemaSendBuf *ecSendBufBkp;
 int32_t responseCount = 0;
@@ -31,6 +32,8 @@ subSystemInfo systemInfo;
 
 extern ocwarePostResultData ocwarePostArray[TEMP_STR_BUFF_SIZE];
 extern uint8_t  ocwarePostArrayIndex;
+int8_t alertRecord = 1;
+extern int8_t alertFlag;
 ocwarePostReplyCode ocmwReplyCode[] = {
     /* Message Type, reply code, Description */
     {OCMP_MSG_TYPE_POST, POST_DEV_NOSTATUS , "POST DEV NOSTATUS"},
@@ -51,7 +54,7 @@ ocwarePostReplyCode ocmwReplyCode[] = {
  * Input(s)         : ptr
  * Output(s)        :
 ******************************************************************************/
-inline void ocmw_free_global_pointer(void **ptr)
+void ocmw_free_global_pointer(void **ptr)
 {
     if(*ptr != NULL) {
         free(*ptr);
@@ -296,6 +299,7 @@ static int32_t ocmw_tokenize_class_str( const int8_t *str,
 void ocmw_fill_payload_data_for_commands(char * strTokenArray[],
             strMsgFrame *msgFrame, OCMPMessageFrame *ecMsgFrame, void* paramVal)
 {
+    uint8_t pos = 0;
     if (msgFrame == NULL) {
         return;
     }
@@ -310,7 +314,7 @@ void ocmw_fill_payload_data_for_commands(char * strTokenArray[],
             memset(ecMsgFrame->message.info, 0, MAX_PARM_COUNT);
         }
     }
-    // Handling ethernet packet genrator command
+    // Handling ethernet commands
     if (strncmp("ethernet", msgFrame->subsystem,
                 strlen(msgFrame->subsystem)) == 0 ) {
         if(strstr(strTokenArray[1], "loopBk")) {
@@ -319,6 +323,18 @@ void ocmw_fill_payload_data_for_commands(char * strTokenArray[],
                                     strlen("en_pktGen")) == 0)) {
             memcpy(&ecMsgFrame->message.info[0],
                     (uint16_t *)paramVal, sizeof(uint16_t));
+        } else if ((strncmp(strTokenArray[1], "en_tivaClient",
+                strlen("en_tivaClient")) == 0)) {
+            ecMsgFrame->message.info[pos] = (uint8_t) clientInfo.ip[0];
+            ecMsgFrame->message.info[pos + 1] = (uint8_t) clientInfo.ip[1];
+            ecMsgFrame->message.info[pos + 2] = (uint8_t) clientInfo.ip[2];
+            ecMsgFrame->message.info[pos + 3] = (uint8_t) clientInfo.ip[3];
+            ecMsgFrame->message.info[pos + 4] = (uint8_t)
+                                                (clientInfo.port & 0xff);
+            ecMsgFrame->message.info[pos + 5] = (uint8_t)
+                        ((clientInfo.port & 0xff00) >> 8);
+
+            ecMsgFrame->message.info[pos + 6] = (uint8_t) clientInfo.noOfRepeat;
         }
     }
 }
@@ -348,7 +364,7 @@ int32_t ocmw_msg_packetize_and_send(char * strTokenArray[], uint8_t action,
 
     paramValLen = strlen((char *)paramVal);
     if (!((msgType == OCMP_MSG_TYPE_COMMAND) &&
-            ((strncmp(strTokenArray[1], "get", strlen("get")) == 0) ||
+            ((strcmp(strTokenArray[1], "get")) ||
             (strncmp(strTokenArray[1], "set", strlen("get")) == 0)))) {
         if (paramValLen == 1 || paramValLen <= 5) {
             logdebug ("Paramvalue is of integer type : %d\n", atoi( paramVal));
@@ -564,7 +580,6 @@ int32_t ocmw_msg_packetize_and_send(char * strTokenArray[], uint8_t action,
  ******************************************************************************/
 void * ocmw_thread_uartmsgparser(void *pthreadData)
 {
-    logdebug("Uart task created \n");
     while (1) {
         /* Waiting on the  semecMsgParser to be released by uart */
         sem_wait(&semecMsgParser);
@@ -610,6 +625,7 @@ void ocmw_ec_msgparser(void)
     int32_t sendPktNonpayloadSize = 0;
     sMsgParam dmsgFrameParam;
     OCMPMessageFrame ecReceivedMsg;
+    alertRecord = 1;
 
     sendPktNonpayloadSize = (sizeof(OCMPMessage) - sizeof(void *)
             + sizeof(OCMPHeader));
@@ -632,20 +648,20 @@ void ocmw_ec_msgparser(void)
     actionType = ecReceivedMsg.message.action;
     paramInfo = ecReceivedMsg.message.parameters;
 
-    /*
-     * TODO:Temporary fix for handling alerts
-     */
-    if (msgType == OCMP_MSG_TYPE_ALERT) {
-        free(ecReceivedMsg.message.info);
-        return;
-    }
-
     printf("Received from ec :\n");
     for (indexCount = 0; indexCount < OCMP_MSG_SIZE; indexCount++) {
         printf("0x%x  ", mcuMsgBuf[indexCount]);
     }
     printf("\n");
-
+    /*
+     * Alerts handling
+     */
+    if ((msgType == OCMP_MSG_TYPE_ALERT) || (alertFlag > 0)) {
+            ocmw_handle_alert_msg(sys_schema, &ecReceivedMsg, &alertRecord);
+            responseCount++;
+        ocmw_free_global_pointer((void**)&ecSendBufBkp);
+        return;
+    }
     /* In case of timeout, return from the thread
      * without processing the data to avoid sync issue.
      */
@@ -751,9 +767,21 @@ int32_t ocmw_send_msg(OCMPMessageFrame ecMsgFrame, uint8_t interface)
             ret = ocmw_send_eth_msgto_ec((int8_t *) &ecMsgFrame,
                                       OCMP_MSG_SIZE, sentDev);
 #ifdef INTERFACE_STUB_EC
-            memset(ethRecvBuf, 0, sizeof(ethRecvBuf));
-            ocmw_recv_eth_msgfrom_ec(ethRecvBuf, sizeof(ethRecvBuf), OCMW_EC_STUB_DEV);
-            ocmw_ec_msgparser();
+            if (alertFlag > 0) {
+                while (1) {
+                    memset(ethRecvBuf, 0, sizeof(ethRecvBuf));
+                    ocmw_recv_eth_msgfrom_ec(ethRecvBuf,
+                                sizeof(ethRecvBuf), OCMW_EC_STUB_DEV);
+                    ocmw_ec_msgparser();
+                    if (alertRecord == 0) {
+                        break;
+                    }
+                }
+            } else {
+                memset(ethRecvBuf, 0, sizeof(ethRecvBuf));
+                ocmw_recv_eth_msgfrom_ec(ethRecvBuf, sizeof(ethRecvBuf), OCMW_EC_STUB_DEV);
+                ocmw_ec_msgparser();
+            }
 #endif
             break;
 

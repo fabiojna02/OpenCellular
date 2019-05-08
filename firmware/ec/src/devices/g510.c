@@ -11,16 +11,16 @@
 #include "helpers/math.h"
 #include "helpers/uart.h"
 #include "inc/common/global_header.h"
-#include "inc/subsystem/testModule/testModule.h"
+#include "inc/devices/g510.h"
 #include "platform/oc-sdr/schema/schema.h"
 #include "registry/SSRegistry.h"
+
+#include <stdio.h>
+#include <string.h>
 
 #include <ti/drivers/UART.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Semaphore.h>
-
-#include <stdio.h>
-#include <string.h>
 
 /* TODO: move to helper? */
 #define STATIC_STRLEN(s) (ARRAY_SIZE(s) - 1)
@@ -93,14 +93,18 @@ static void call_state_cb(const GsmClccInfo *info, void *context)
     switch (info->call_state) {
         case GSM_CALL_STATE_INCOMING: {
             eTEST_MODE_CallEvent callState = TWOG_CALL_EVT_RING;
-            OCMP_GenerateAlert(context, TWOG_SIM_CALLSTATE_CHANGE, &callState);
+            OCMP_GenerateAlert(context, TWOG_SIM_CALLSTATE_CHANGE, &callState,
+                               NULL, OCMP_AXN_TYPE_ACTIVE);
             break;
         }
         case GSM_CALL_STATE_RELEASED: {
             eTEST_MODE_CallEvent callState = TWOG_CALL_EVT_CALL_END;
-            OCMP_GenerateAlert(context, TWOG_SIM_CALLSTATE_CHANGE, &callState);
+            OCMP_GenerateAlert(context, TWOG_SIM_CALLSTATE_CHANGE, &callState,
+                               NULL, OCMP_AXN_TYPE_ACTIVE);
             break;
         }
+        default:
+            break;
     }
 }
 
@@ -267,7 +271,8 @@ static void testModule_task(UArg a0, UArg a1)
             if (GSM_cmgr(s_hGsm, sms_idx, sms, NULL)) {
                 LOGGER("SMS: %.*s\n", 50,
                        sms); // System_printf has a limited buffer
-                OCMP_GenerateAlert(alert_token, TWOG_SIM_INCOMING_MSG, sms);
+                OCMP_GenerateAlert(alert_token, TWOG_SIM_INCOMING_MSG, sms,
+                                   NULL, OCMP_AXN_TYPE_ACTIVE);
             } else {
                 LOGGER_ERROR("TESTMOD:Failed to read SMS\n");
             }
@@ -282,7 +287,7 @@ static void testModule_task(UArg a0, UArg a1)
     }
 }
 
-ePostCode g510_task_init(void *driver, const void **config,
+ePostCode g510_task_init(void *driver, const void *config,
                          const void *alert_token)
 {
     /* TODO: there's probably a better way to wait on the sim card */

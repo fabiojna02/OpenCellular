@@ -32,7 +32,7 @@ static bool _get_status(void *driver, unsigned int param_id, void *return_buf)
         default: {
             LOGGER_ERROR("LTC4275::Unknown status param %d\n", param_id);
             ret = false;
-        }
+        } break;
     }
     return ret;
 }
@@ -64,12 +64,14 @@ static void _alert_handler(LTC4275_Event evt, void *context)
             LOGGER_ERROR("Unknown LTC4275evt: %d\n", evt);
             return;
     }
-    OCMP_GenerateAlert(context, alert, &evt);
+    OCMP_GenerateAlert(context, alert, &evt, NULL, OCMP_AXN_TYPE_ACTIVE);
     LOGGER_DEBUG("LTC4275A alert: %d generated.\n", alert);
 }
 
 /*****************************************************************************
  *****************************************************************************/
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 static ePostCode _init(void *driver, const void *config,
                        const void *alert_token)
 {
@@ -80,6 +82,7 @@ static ePostCode _init(void *driver, const void *config,
     ltc4275_set_alert_handler(driver, _alert_handler, (void *)alert_token);
     return POST_DEV_CFG_DONE;
 }
+#pragma GCC diagnostic pop
 
 const Driver_fxnTable LTC4275_fxnTable = {
     /* Message handlers */

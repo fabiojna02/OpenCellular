@@ -11,21 +11,6 @@
 #include "common/inc/global/Framework.h"
 #include "inc/devices/ina226.h"
 
-typedef enum INA226Status {
-    INA226_STATUS_BUS_VOLTAGE = 0,
-    INA226_STATUS_SHUNT_VOLTAGE,
-    INA226_STATUS_CURRENT,
-    INA226_STATUS_POWER,
-} INA226Status;
-
-typedef enum INA226Config {
-    INA226_CONFIG_CURRENT_LIM = 0,
-} INA226Config;
-
-typedef enum INA226Alert {
-    INA226_ALERT_OVERCURRENT = 0,
-} INA226Alert;
-
 static bool _get_status(void *driver, unsigned int param_id, void *return_buf)
 {
     switch (param_id) {
@@ -82,14 +67,18 @@ static ePostCode _probe(void *driver, POSTData *postData)
     return ina226_probe(driver, postData);
 }
 
-static void _alert_handler(INA226_Event evt, uint16_t value, void *alert_data)
+static void _alert_handler(INA226_Event evt, OCMPActionType alertAction,
+                           uint16_t value, uint16_t lValue, void *alert_data)
 {
     if (evt != INA226_EVT_COL) {
-        LOGGER_WARNING("IN226::Unsupported INA event 0x%x\n", evt);
-        return;
+        if (evt != INA226_EVT_CUL) {
+            LOGGER_WARNING("IN226::Unsupported INA event 0x%x\n", evt);
+            return;
+        }
     }
 
-    OCMP_GenerateAlert(alert_data, INA226_ALERT_OVERCURRENT, &value);
+    OCMP_GenerateAlert(alert_data, INA226_ALERT_OVERCURRENT, &value, &lValue,
+                       alertAction);
     LOGGER_DEBUG("INA226 Event: 0x%x Current: %u\n", evt, value);
 }
 

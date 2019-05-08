@@ -13,6 +13,7 @@
  *                               HEADER FILES
  *****************************************************************************/
 #include "common/inc/global/post_frame.h"
+#include "common/inc/global/ocmp_frame.h"
 #include "common/inc/global/Framework.h"
 #include "drivers/OcGpio.h"
 #include "inc/common/i2cbus.h"
@@ -34,7 +35,24 @@ typedef enum {
     CONF_TEMP_SE98A_CRITICAL_LIMIT_REG
 } eTempSensor_ConfigParamsId;
 
-typedef void (*SE98A_CallbackFn)(SE98A_Event evt, int8_t temperature,
+typedef enum Se98aStatus {
+    SE98A_STATUS_TEMPERATURE = 0,
+} Se98aStatus;
+
+typedef enum Se98aConfig {
+    SE98A_CONFIG_LIM_LOW = 0,
+    SE98A_CONFIG_LIM_HIGH,
+    SE98A_CONFIG_LIM_CRIT,
+} Se98aConfig;
+
+typedef enum Se98aAlert {
+    SE98A_ALERT_LOW = 0,
+    SE98A_ALERT_HIGH,
+    SE98A_ALERT_CRITICAL
+} Se98aAlert;
+
+typedef void (*SE98A_CallbackFn)(SE98A_Event evt, OCMPActionType alertAction,
+                                 int8_t temperature, int8_t lValue,
                                  void *context);
 
 typedef struct SE98A_Cfg {

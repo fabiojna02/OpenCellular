@@ -17,6 +17,8 @@
 #include "inc/common/spibus.h"
 #include "inc/common/global_header.h"
 #include "inc/global/OC_CONNECT1.h"
+#include <ti/sysbios/BIOS.h>
+#include "src/filesystem/fs_wrapper.h"
 
 #define AT45DB_DATA_WR_OPCODE_WR_COUNT 4
 #define AT45DB_DATA_RD_OPCODE_WR_COUNT 8
@@ -81,10 +83,13 @@ static ReturnStatus AT45DB_read_reg(AT45DB_Dev *dev,
  **    RETURN TYPE     : Success or failure
  **
  *****************************************************************************/
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 static ReturnStatus AT45DB_write_reg(AT45DB_Dev *dev,
                                      void *cmdbuffer, /* cmd or opcode buffer */
-                                     uint8_t *regValue, uint32_t pageOffset,
-                                     uint32_t NumOfbytes, uint8_t writeCount)
+                                     const uint8_t *regValue,
+                                     uint32_t pageOffset, uint32_t NumOfbytes,
+                                     uint8_t writeCount)
 {
     ReturnStatus status = RETURN_NOTOK;
     SPI_Handle at45dbHandle = spi_get_handle(dev->cfg.dev.bus);
@@ -93,6 +98,7 @@ static ReturnStatus AT45DB_write_reg(AT45DB_Dev *dev,
             "AT45DBFLASHMEMORY:ERROR:: Failed to get SPI Bus for at45db flash memory "
             "0x%x on bus 0x%x.\n",
             dev->cfg.dev.chip_select, dev->cfg.dev.bus);
+        Semaphore_pend(semFilesysMsg, BIOS_WAIT_FOREVER);
     } else {
         status =
             spi_reg_write(at45dbHandle, dev->cfg.dev.chip_select, cmdbuffer,
@@ -100,7 +106,7 @@ static ReturnStatus AT45DB_write_reg(AT45DB_Dev *dev,
     }
     return status;
 }
-
+#pragma GCC diagnostic pop
 /*****************************************************************************
  **    FUNCTION NAME   : at45db_readStatusRegister
  **
@@ -201,7 +207,7 @@ ReturnStatus at45db_data_read(AT45DB_Dev *dev, uint8_t *data,
  **    RETURN TYPE     : Success or failure
  **
  *****************************************************************************/
-ReturnStatus at45db_data_write(AT45DB_Dev *dev, uint8_t *data,
+ReturnStatus at45db_data_write(AT45DB_Dev *dev, const uint8_t *data,
                                uint32_t data_size, uint32_t byte, uint32_t page)
 {
     ReturnStatus status = RETURN_NOTOK;
@@ -245,6 +251,8 @@ ReturnStatus at45db_data_write(AT45DB_Dev *dev, uint8_t *data,
  **    RETURN TYPE     : Success or failure
  **
  *****************************************************************************/
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 static ReturnStatus at45db_getDevID(AT45DB_Dev *dev, uint32_t *devID)
 {
     uint8_t txBuffer = AT45DB_DEVID_RD_OPCODE; /* opcode to get device id */
@@ -252,7 +260,7 @@ static ReturnStatus at45db_getDevID(AT45DB_Dev *dev, uint32_t *devID)
     return AT45DB_read_reg(dev, &txBuffer, devID, NULL, AT45DB_DEVID_RD_BYTES,
                            AT45DB_DEVID_OPCODE_WR_COUNT);
 }
-
+#pragma GCC diagnostic pop
 /*****************************************************************************
  **    FUNCTION NAME   : at45db_probe
  **

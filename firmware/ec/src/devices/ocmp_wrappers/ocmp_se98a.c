@@ -12,22 +12,6 @@
 #include "helpers/math.h"
 #include "inc/devices/se98a.h"
 
-typedef enum Se98aStatus {
-    SE98A_STATUS_TEMPERATURE = 0,
-} Se98aStatus;
-
-typedef enum Se98aConfig {
-    SE98A_CONFIG_LIM_LOW = 0,
-    SE98A_CONFIG_LIM_HIGH,
-    SE98A_CONFIG_LIM_CRIT,
-} Se98aConfig;
-
-typedef enum Se98aAlert {
-    SE98A_ALERT_LOW = 0,
-    SE98A_ALERT_HIGH,
-    SE98A_ALERT_CRITICAL
-} Se98aAlert;
-
 static bool _get_status(void *driver, unsigned int param_id, void *return_buf)
 {
     switch (param_id) {
@@ -88,7 +72,8 @@ static ePostCode _probe(void *driver, POSTData *postData)
     return se98a_probe(driver, postData);
 }
 
-static void _alert_handler(SE98A_Event evt, int8_t temperature, void *context)
+static void _alert_handler(SE98A_Event evt, OCMPActionType alertAction,
+                           int8_t temperature, int8_t lValue, void *context)
 {
     unsigned int alert;
     switch (evt) {
@@ -107,7 +92,7 @@ static void _alert_handler(SE98A_Event evt, int8_t temperature, void *context)
     }
 
     uint8_t alert_data = (uint8_t)MAX((int8_t)0, temperature);
-    OCMP_GenerateAlert(context, alert, &alert_data);
+    OCMP_GenerateAlert(context, alert, &alert_data, &lValue, alertAction);
     LOGGER_DEBUG("SE98A Event: %d Temperature: %d\n", evt, temperature);
 }
 
@@ -121,7 +106,7 @@ static ePostCode _init(void *driver, const void *config,
         return POST_DEV_CFG_DONE;
     }
     const SE98A_Config *se98a_config = config;
-    for (int i = 0; i < ARRAY_SIZE(se98a_config->limits); ++i) {
+    for (uint8_t i = 0; i < ARRAY_SIZE(se98a_config->limits); ++i) {
         if (se98a_set_limit(driver, i + 1, se98a_config->limits[i]) !=
             RETURN_OK) {
             return POST_DEV_CFG_FAIL;
